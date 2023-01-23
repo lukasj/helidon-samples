@@ -1,0 +1,1 @@
+Sample applications for using Jakarta APIs in Helidon.
