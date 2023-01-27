@@ -58,13 +58,7 @@ public class MailService implements Service {
     }
 
     private void search(ServerRequest request, ServerResponse response) {
-        String user = mailProperties.getProperty("mail.username");
-        Session session = Session.getDefaultInstance(mailProperties, new Authenticator() {
-            @Override
-            protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(user, mailProperties.getProperty("mail.password"));
-            }
-        });
+        Session session = getMailSession(mailProperties);
         Optional<String> term = request.queryParams().first("term");
         Store store;
         Folder inbox = null;
@@ -106,19 +100,14 @@ public class MailService implements Service {
 
     private void send(ServerRequest request, ServerResponse response) {
         String user = mailProperties.getProperty("mail.username");
-        Session session = Session.getDefaultInstance(mailProperties, new Authenticator() {
-            @Override
-            protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(user, mailProperties.getProperty("mail.password"));
-            }
-        });
+        Session session = getMailSession(mailProperties);
         try {
-            InternetAddress[] userEmail = InternetAddress.parse(user);
+            InternetAddress userEmail = new InternetAddress(user);
             MimeMessage msg = new MimeMessage(session);
             msg.setFrom(user);
-            msg.setSender(userEmail[0]);
-            msg.setReplyTo(userEmail);
-            msg.setRecipients(Message.RecipientType.TO, userEmail);
+            msg.setSender(userEmail);
+            msg.setReplyTo(new InternetAddress[] {userEmail});
+            msg.setRecipients(Message.RecipientType.TO, new InternetAddress[] {userEmail});
             msg.setSubject("Greetings from Helidon!");
             msg.setText("Sent by Angus Mail/Helidon.");
             Transport.send(msg);
@@ -129,6 +118,17 @@ public class MailService implements Service {
                 .add("message", "email has been sent!")
                 .build();
         response.status(Http.Status.OK_200).send(returnObject);
+    }
+
+    private Session getMailSession(Properties properties) {
+        return Session.getDefaultInstance(mailProperties, new Authenticator() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(
+                        mailProperties.getProperty("mail.username"),
+                        mailProperties.getProperty("mail.password"));
+            }
+        });
     }
 
 }
